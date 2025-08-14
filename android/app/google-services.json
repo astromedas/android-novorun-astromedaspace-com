@@ -1,0 +1,30 @@
+{
+  "project_info": {
+    "project_number": "989682514176",
+    "firebase_url": "https://profound-media-446411-c3-default-rtdb.firebaseio.com",
+    "project_id": "profound-media-446411-c3",
+    "storage_bucket": "profound-media-446411-c3.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:989682514176:android:73281acd3e31aad609dbe5",
+        "android_client_info": {
+          "package_name": "com.novorun.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC2TIv5LGFQSp75KX0jDERemuZyM4IrUdo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
