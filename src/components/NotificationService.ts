@@ -58,7 +58,7 @@ class NotificationService {
       const userId = await AsyncStorage.getItem('userId');
 
       await axios.post(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/notification/fcm',
+        'https://ecf63b299473.ngrok-free.app/api/user/notification/fcm',
         {
           fcmToken,
           userId,

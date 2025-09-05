@@ -12,7 +12,6 @@ import {
 } from 'react-native';
 import {
   NavigationContainer,
-  NavigationContainerRef,
   NavigatorScreenParams,
 } from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
@@ -38,19 +37,19 @@ import EventModeScreen from './src/screens/EventModeScreen';
 import SplashScreen from 'react-native-splash-screen';
 import SplashImageScreen from './src/screens/SplashScreen';
 import TermsAndConditionsScreen from './src/components/TermsAndConditionsScreen';
-import ForgotPasswordScreen from './src/screens/ForgotPassword';
 import appCheck from '@react-native-firebase/app-check';
 import CommunityScreen from './src/screens/CommunityScreen';
 import YourPostScreen from './src/screens/YourPostScreen';
-import VersionManager from './src/utils/VersionManager';
+import OTPLoginScreen from './src/screens/OTPLoginScreen';
 import { navigationRef } from './src/utils/navigationRef';
 import {NativeModules} from 'react-native';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 
 export type RootStackParamList = {
   Splash: undefined;
   Login: undefined;
+  OTPLogin: undefined;
   Home: undefined;
-  ForgotPasswordScreen: undefined;
   BottomTabs: NavigatorScreenParams<BottomTabParamList>;
   NotificationScreen: undefined;
   MapScreen: {
@@ -184,7 +183,14 @@ const App = () => {
       await appCheck().activate('play-integrity', true);
     };
 
+    const configureGoogleSignIn = () => {
+      GoogleSignin.configure({
+        webClientId: '989682514176-4k30iajpe0s6e6oh52tbu1na7ml00k2v.apps.googleusercontent.com',
+      });
+    };
+
     initializeAppCheck();
+    configureGoogleSignIn();
   }, []);
   // Remove local navigationRef since we're using the global one
   const checkApplicationPermission = async () => {
@@ -243,17 +249,6 @@ const App = () => {
     }
   };
 
-  const checkForAppUpdates = async () => {
-    try {
-      // Add delay to ensure app is fully loaded
-      setTimeout(async () => {
-        const versionManager = VersionManager.getInstance();
-        await versionManager.checkAndShowUpdateIfNeeded();
-      }, 3000); // 3 second delay
-    } catch (error) {
-      console.error('Error checking for app updates:', error);
-    }
-  };
 
   const [isLoggedIn, setLoggedIn] = useState(false);
   const [userId, setUserId] = useState<string | undefined>(undefined);
@@ -419,6 +414,7 @@ const App = () => {
             <Stack.Screen name="Splash" component={SplashImageScreen} />
             <Stack.Screen name="Onboarding" component={OnboardingScreen} />
             <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="OTPLogin" component={OTPLoginScreen} />
             <Stack.Screen
               name="ActivityScreen"
               component={ActivityScreen}
@@ -446,12 +442,6 @@ const App = () => {
             />
             <Stack.Screen name="EventModeScreen" component={EventModeScreen} />
             <Stack.Screen name="YourPostScreen" component={YourPostScreen} />
-
-            <Stack.Screen
-              name="ForgotPasswordScreen"
-              component={ForgotPasswordScreen}
-            />
-
             <Stack.Screen name="LeaderBoard" component={LeaderBoard} />
             <Stack.Screen name="EventScreen" component={EventScreen} />
           </Stack.Navigator>

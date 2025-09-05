@@ -61,7 +61,7 @@ const fetchEnrollmentStatus = async (
   if (eventId) {
     try {
       const response = await axios.get(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/enroll/check',
+        'https://ecf63b299473.ngrok-free.app/api/user/enroll/check',
         {
           params: {
             userId,
@@ -159,7 +159,7 @@ const EventScreen: React.FC = () => {
     console.log('user id', userid);
     try {
       const response = await axios.get(
-        `https://astro-api-okfis.ondigitalocean.app/api/user/event/details?userId=${userid}`,
+        `https://ecf63b299473.ngrok-free.app/api/user/event/details?userId=${userid}`,
         {
           headers: {
             Authorization: `Bearer ${token}`,
@@ -220,7 +220,7 @@ const EventScreen: React.FC = () => {
       if (eventId && user?.insideOutside) {
         try {
           const response = await axios.post(
-            'https://astro-api-okfis.ondigitalocean.app/api/user/enroll/create',
+            'https://ecf63b299473.ngrok-free.app/api/user/enroll/create',
             {
               userId: userid,
               eventId: eventId,

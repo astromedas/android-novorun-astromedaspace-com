@@ -678,7 +678,7 @@ const MapScreen = ({route}: {route: RouteProp<RouteParams, 'MapScreen'>}) => {
       // Add single participation creation request to sync queue (combines create + update)
       await OfflineSyncService.addToSyncQueue(
         'participation_create',
-        'https://astro-api-okfis.ondigitalocean.app/api/user/participation/create',
+        'https://ecf63b299473.ngrok-free.app/api/user/participation/create',
         {
           userId: startUserId,
           startTime: startTime,
@@ -725,7 +725,7 @@ const MapScreen = ({route}: {route: RouteProp<RouteParams, 'MapScreen'>}) => {
 
       await OfflineSyncService.addToSyncQueue(
         'activity_create',
-        'https://astro-api-okfis.ondigitalocean.app/api/activity/create',
+        'https://ecf63b299473.ngrok-free.app/api/activity/create',
         activityData,
         {
           Authorization: `Bearer ${user?.accessToken}`,

@@ -1,4 +1,4 @@
-import React, {useContext, useEffect, useState} from 'react';
+import React, {useContext, useState} from 'react';
 import {
   View,
   StyleSheet,
@@ -25,6 +25,7 @@ import UserContext from '../context/userContext';
 import axios from 'axios';
 import {useFocusEffect} from '@react-navigation/native';
 import CityAutocomplete from '../components/CityAutocomplete';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const {height: SCREEN_HEIGHT} = Dimensions.get('window');
 
@@ -32,16 +33,6 @@ const HomeScreen: React.FC = () => {
   const user = useContext(UserContext);
   const [showHome, setShowHome] = useState(false);
   const [currentCard, setCurrentCard] = useState(0);
-  const [resetPassword, setResetPassword] = useState(false);
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [errorMessage, setErrorMessage] = useState('');
-  const [isCurrentPasswordVisible, setIsCurrentPasswordVisible] =
-    useState(false);
-  const [isNewPasswordVisible, setIsNewPasswordVisible] = useState(false);
-  const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
-    useState(false);
   // Profile creation states
   const [profileStep, setProfileStep] = useState(0);
   const [showProfileModal, setShowProfileModal] = useState(false);
@@ -67,27 +58,6 @@ const HomeScreen: React.FC = () => {
     },
   ];
 
-  useEffect(() => {
-    const checkReset = async () => {
-      try {
-        const response = await axios.get(
-          `https://astro-api-okfis.ondigitalocean.app/api/user/auth/is?userId=${user?.userId}`,
-          {
-            headers: {
-              Authorization: `Bearer ${user?.accessToken}`,
-            },
-          },
-        );
-        if (response.data && typeof response.data.passwordReset === 'boolean') {
-          setResetPassword(!response.data.passwordReset);
-        }
-      } catch (error) {
-        console.log('Error fetching reset status:', error);
-      }
-    };
-    checkReset();
-  }, [user?.userId, user?.accessToken]);
-
   useFocusEffect(
     React.useCallback(() => {
       if (user?.picture !== null) {
@@ -96,7 +66,7 @@ const HomeScreen: React.FC = () => {
       const fetchUserDetails = async () => {
         try {
           const response = await axios.get(
-            `https://astro-api-okfis.ondigitalocean.app/api/user/profile/check?userId=${user?.userId}`,
+            `https://ecf63b299473.ngrok-free.app/api/user/profile/check?userId=${user?.userId}`,
             {
               headers: {
                 Authorization: `Bearer ${user?.accessToken}`,
@@ -104,20 +74,52 @@ const HomeScreen: React.FC = () => {
             },
           );
           if (response.status === 200) {
+            console.log('✅ USER PROFILE FOUND:', {
+              userId: user?.userId,
+              hasProfile: true,
+              fullName: response.data.profile.fullName,
+              email: response.data.profile.email,
+            });
+
             setShowHome(true);
-            user?.setPicture(response.data.profilePic.image);
+            // Safely handle profile picture (may be null)
+            if (response.data.profilePic && response.data.profilePic.image) {
+              user?.setPicture(response.data.profilePic.image);
+            } else {
+              user?.setPicture(undefined); // Set to undefined if no profile picture
+            }
             user?.setName(response.data.profile.fullName);
             user?.setWeight(response.data.profile.weight);
             user?.setGender(response.data.profile.gender);
-            
-            // Save weight to AsyncStorage for tracking calculations after app restart
-            if (response.data.profile.weight) {
-              await AsyncStorage.setItem('userWeight', response.data.profile.weight.toString());
-            }
           }
         } catch (error: any) {
           if (error.response && error.response.status === 404) {
+            // Check if this is a new user who needs profile creation
+            const requiresProfile = await AsyncStorage.getItem(
+              'requiresProfile',
+            );
+            if (requiresProfile === 'true') {
+              console.log('🆕 NEW USER DETECTED - SHOWING PROFILE MODAL:', {
+                userId: user?.userId,
+                email: user?.email,
+                requiresProfile: true,
+              });
+
+              setShowProfileModal(true);
+              await AsyncStorage.removeItem('requiresProfile');
+            } else {
+              console.log(
+                'ℹ️ USER EXISTS BUT NO PROFILE - POSSIBLE ACCOUNT LINKING:',
+                {
+                  userId: user?.userId,
+                  email: user?.email,
+                  error: 'Profile not found',
+                },
+              );
+            }
             setShowHome(false);
+          } else {
+            console.error('❌ PROFILE FETCH ERROR:', error);
           }
         }
       };
@@ -125,46 +127,6 @@ const HomeScreen: React.FC = () => {
       return () => {};
     }, [user]),
   );
-
-  const validatePassword = (): boolean => {
-    if (password !== confirmPassword) {
-      setErrorMessage('Passwords do not match.');
-      return false;
-    }
-    if (password.length < 6) {
-      setErrorMessage('Password must be at least 6 characters long.');
-      return false;
-    }
-    setErrorMessage('');
-    return true;
-  };
-
-  const resetPasswordHandler = async () => {
-    if (!validatePassword()) {
-      return;
-    }
-    try {
-      const response = await axios.put(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/auth/ups',
-        {
-          userId: user?.userId,
-          currentPassword: currentPassword,
-          newPassword: password,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${user?.accessToken}`,
-          },
-        },
-      );
-      if (response.status === 200) {
-        setResetPassword(false);
-        setCurrentCard(0);
-      }
-    } catch (error: any) {
-      setErrorMessage(error.response?.data?.message);
-    }
-  };
 
   const handleNext = () => {
     if (currentCard < onboardingCards.length - 1) {
@@ -232,21 +194,34 @@ const HomeScreen: React.FC = () => {
       Alert.alert('Error', 'Please select your city');
       return;
     }
+
+    // Validate required fields
+    if (!user?.userId) {
+      Alert.alert('Error', 'User ID is missing. Please try logging in again.');
+      return;
+    }
+    if (!fullName.trim()) {
+      Alert.alert('Error', 'Please enter your full name');
+      return;
+    }
+
     setIsSubmitting(true);
     const profileData = {
       userId: user?.userId,
       email: user?.email || '',
-      fullName,
+      fullName: fullName.trim(),
       gender,
-      height: parseFloat(height),
-      weight: parseFloat(weight),
-      age: parseInt(age, 10),
-      mobile,
-      city,
+      height: parseFloat(height) || null,
+      weight: parseFloat(weight) || null,
+      age: parseInt(age, 10) || null,
+      mobile: mobile.trim(),
+      city: city.trim(),
     };
+    console.log('📝 CREATING PROFILE - Data:', profileData); // Debug log
+
     try {
       const response = await axios.post(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/profile/create',
+        'https://ecf63b299473.ngrok-free.app/api/user/profile/create',
         profileData,
         {
           headers: {
@@ -255,24 +230,28 @@ const HomeScreen: React.FC = () => {
         },
       );
       if (response.status === 201) {
+        console.log('✅ PROFILE CREATED SUCCESSFULLY:', {
+          userId: profileData.userId,
+          fullName: profileData.fullName,
+          profileId: response.data.profile?.id,
+          createdAt: new Date().toISOString(),
+        });
+
         user?.setName(response.data.profile?.fullName);
         user?.setWeight(response.data.profile?.weight);
         user?.setGender(response.data.profile?.gender);
         setShowProfileModal(false);
         setShowHome(true);
-        
-        // Save weight to AsyncStorage for tracking calculations after app restart
-        if (response.data.profile?.weight) {
-          await AsyncStorage.setItem('userWeight', response.data.profile.weight.toString());
-        }
-        
+
         Alert.alert('Success', 'Profile created successfully!');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Profile creation error:', error);
+      console.error('Error response:', error.response?.data); // More detailed error
       Alert.alert(
         'Error',
-        'An error occurred while creating your profile. Please try again.',
+        error.response?.data?.message ||
+          'An error occurred while creating your profile. Please try again.',
       );
     } finally {
       setIsSubmitting(false);
@@ -415,113 +394,6 @@ const HomeScreen: React.FC = () => {
     }
   };
 
-  if (resetPassword) {
-    return (
-      <KeyboardAvoidingView
-        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-        style={styles.overlayContainer}>
-        <ImageBackground
-          source={require('../assets/background.jpeg')}
-          style={styles.overlayBackground}
-          resizeMode="cover">
-          <View style={styles.resetPasswordContainer}>
-            <View style={styles.resetPasswordCard}>
-              <Text style={styles.resetPasswordTitle}>Change Password</Text>
-              <Text style={styles.resetPasswordSubtitle}>
-                Please set a new password for your account
-              </Text>
-
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  placeholder="Enter Given password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!isCurrentPasswordVisible}
-                  value={currentPassword}
-                  onChangeText={setCurrentPassword}
-                  style={styles.passwordInput}
-                />
-                <TouchableOpacity
-                  onPress={() =>
-                    setIsCurrentPasswordVisible(!isCurrentPasswordVisible)
-                  }
-                  style={styles.passwordEyeIcon}>
-                  <Image
-                    source={
-                      isCurrentPasswordVisible
-                        ? require('../assets/eye.png')
-                        : require('../assets/blind.png')
-                    }
-                    style={styles.passwordEyeImage}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  placeholder="Enter new password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!isNewPasswordVisible}
-                  value={password}
-                  onChangeText={setPassword}
-                  style={styles.passwordInput}
-                />
-                <TouchableOpacity
-                  onPress={() => setIsNewPasswordVisible(!isNewPasswordVisible)}
-                  style={styles.passwordEyeIcon}>
-                  <Image
-                    source={
-                      isNewPasswordVisible
-                        ? require('../assets/eye.png')
-                        : require('../assets/blind.png')
-                    }
-                    style={styles.passwordEyeImage}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              <View style={styles.passwordInputContainer}>
-                <TextInput
-                  placeholder="Confirm new password"
-                  placeholderTextColor="#999"
-                  secureTextEntry={!isConfirmPasswordVisible}
-                  value={confirmPassword}
-                  onChangeText={setConfirmPassword}
-                  style={styles.passwordInput}
-                />
-                <TouchableOpacity
-                  onPress={() =>
-                    setIsConfirmPasswordVisible(!isConfirmPasswordVisible)
-                  }
-                  style={styles.passwordEyeIcon}>
-                  <Image
-                    source={
-                      isConfirmPasswordVisible
-                        ? require('../assets/eye.png')
-                        : require('../assets/blind.png')
-                    }
-                    style={styles.passwordEyeImage}
-                  />
-                </TouchableOpacity>
-              </View>
-
-              {errorMessage ? (
-                <Text style={styles.resetPasswordError}>{errorMessage}</Text>
-              ) : null}
-
-              <TouchableOpacity
-                style={styles.resetPasswordButton}
-                onPress={resetPasswordHandler}>
-                <Text style={styles.resetPasswordButtonText}>
-                  Change Password
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </ImageBackground>
-      </KeyboardAvoidingView>
-    );
-  }
-
   if (!showHome) {
     return (
       <View style={styles.container}>
@@ -593,7 +465,16 @@ const HomeScreen: React.FC = () => {
             <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
               <View style={styles.modalContent}>
                 <View style={styles.modalHeader}>
-                  <Text style={styles.modalTitle}>Create Your Profile</Text>
+                  <Text style={styles.modalTitle}>
+                    {user?.email
+                      ? 'Complete Your Profile'
+                      : 'Create Your Profile'}
+                  </Text>
+                  <Text style={styles.modalSubtitle}>
+                    {user?.email
+                      ? 'We found your account! Just complete your profile details.'
+                      : "Let's set up your profile to get started."}
+                  </Text>
                   <View style={styles.progressContainer}>
                     {[0, 1, 2].map(step => (
                       <View
@@ -782,107 +663,6 @@ const styles = StyleSheet.create({
     flex: 1,
     padding: 10,
   },
-  overlayContainer: {
-    flex: 1,
-  },
-  overlayBackground: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  resetPasswordContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  resetPasswordCard: {
-    backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 20,
-    padding: 30,
-    width: '100%',
-    maxWidth: 400,
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
-  },
-  resetPasswordTitle: {
-    fontSize: 26,
-    fontWeight: 'bold',
-    marginBottom: 10,
-    textAlign: 'center',
-    color: '#333',
-  },
-  resetPasswordSubtitle: {
-    fontSize: 16,
-    textAlign: 'center',
-    marginBottom: 25,
-    color: '#666',
-  },
-  passwordInputContainer: {
-    width: '100%',
-    marginBottom: 20,
-    position: 'relative',
-  },
-  passwordInput: {
-    backgroundColor: 'white',
-    borderRadius: 10,
-    padding: 15,
-    fontSize: 16,
-    borderWidth: 1,
-    borderColor: '#ddd',
-    color: '#333',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 1,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 2,
-    elevation: 2,
-  },
-  passwordEyeIcon: {
-    position: 'absolute',
-    right: 15,
-    top: 15,
-  },
-  passwordEyeImage: {
-    width: 24,
-    height: 24,
-    tintColor: '#666',
-  },
-  resetPasswordError: {
-    color: '#e74c3c',
-    marginBottom: 20,
-    textAlign: 'center',
-    fontSize: 14,
-  },
-  resetPasswordButton: {
-    backgroundColor: '#007bff',
-    paddingVertical: 15,
-    paddingHorizontal: 30,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 3,
-  },
-  resetPasswordButtonText: {
-    color: 'white',
-    fontSize: 18,
-    fontWeight: 'bold',
-  },
   modalContainer: {
     flex: 1,
     justifyContent: 'center',
@@ -915,7 +695,13 @@ const styles = StyleSheet.create({
     fontSize: 20,
     fontWeight: 'bold',
     color: '#333',
-    marginBottom: 10,
+    marginBottom: 5,
+  },
+  modalSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 15,
   },
   progressContainer: {
     flexDirection: 'row',

@@ -6,7 +6,7 @@ import {navigateToLogin} from './navigationRef';
 
 // Create axios instance
 const httpClient = axios.create({
-  baseURL: 'https://astro-api-okfis.ondigitalocean.app/api',
+  baseURL: 'https://ecf63b299473.ngrok-free.app/api',
   timeout: 10000,
 });
 
@@ -74,7 +74,7 @@ httpClient.interceptors.response.use(
 
                     // Navigate to login screen and clear navigation stack
                     navigateToLogin();
-                  // eslint-disable-next-line no-catch-shadow
+                    // eslint-disable-next-line no-catch-shadow
                   } catch (error) {
                     console.error('Error clearing session data:', error);
                     // Even if clearing fails, still navigate to login

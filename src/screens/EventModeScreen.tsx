@@ -53,7 +53,7 @@ export default function EventModeScreen() {
     const checkReset = async () => {
       try {
         const response = await axios.get(
-          `https://astro-api-okfis.ondigitalocean.app/api/user/auth/is?userId=${user?.userId}`,
+          `https://ecf63b299473.ngrok-free.app/api/user/auth/is?userId=${user?.userId}`,
           {
             headers: {
               Authorization: `Bearer ${user?.accessToken}`,
@@ -85,7 +85,7 @@ export default function EventModeScreen() {
 
         try {
           const response = await axios.get(
-            `https://astro-api-okfis.ondigitalocean.app/api/user/profile/check?userId=${user?.userId}`,
+            `https://ecf63b299473.ngrok-free.app/api/user/profile/check?userId=${user?.userId}`,
             {
               headers: {
                 Authorization: `Bearer ${user?.accessToken}`,
@@ -95,7 +95,12 @@ export default function EventModeScreen() {
           if (response.status === 200) {
             // console.log('hchshjdhchjshcsd', response.data);hello
             setShowHome(true);
-            user?.setPicture(response.data.profilePic.image);
+            // Safely handle profile picture (may be null)
+            if (response.data.profilePic && response.data.profilePic.image) {
+              user?.setPicture(response.data.profilePic.image);
+            } else {
+              user?.setPicture(undefined); // Set to undefined if no profile picture
+            }
             // console.log('hello gender', response.data.profile.gender);
             user?.setName(response.data.profile.fullName);
             user?.setWeight(response.data.profile.weight);
@@ -137,7 +142,7 @@ export default function EventModeScreen() {
     try {
       console.log('ommala ');
       const response = await axios.put(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/auth/ups',
+        'https://ecf63b299473.ngrok-free.app/api/user/auth/ups',
         {
           userId: user?.userId,
           currentPassword: currentPassword,

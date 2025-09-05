@@ -132,7 +132,7 @@ const ProfilePage: React.FC = () => {
   const fetchProfileData = useCallback(async () => {
     try {
       const response = await axios.get(
-        `https://astro-api-okfis.ondigitalocean.app/api/user/profile/check?userId=${userId}`,
+        `https://ecf63b299473.ngrok-free.app/api/user/profile/check?userId=${userId}`,
         {
           headers: {
             Authorization: `Bearer ${user?.accessToken}`,
@@ -168,7 +168,7 @@ const ProfilePage: React.FC = () => {
   const sendImageToServer = async (base64Image: string) => {
     try {
       const url =
-        'https://astro-api-okfis.ondigitalocean.app/api/user/profile/profilepic';
+        'https://ecf63b299473.ngrok-free.app/api/user/profile/profilepic';
       const response = await axios({
         method: 'put',
         url,
@@ -238,7 +238,7 @@ const ProfilePage: React.FC = () => {
 
     try {
       const response = await axios.put(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/profile/update',
+        'https://ecf63b299473.ngrok-free.app/api/user/profile/update',
         profileData,
         {
           headers: {
@@ -266,7 +266,7 @@ const ProfilePage: React.FC = () => {
   const handleDeleteAccount = async () => {
     try {
       const response = await axios.post(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/deletion',
+        'https://ecf63b299473.ngrok-free.app/api/user/deletion',
         {userId: user?.userId},
         {
           headers: {

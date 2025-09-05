@@ -27,7 +27,7 @@ import {wp, hp} from '../components/responsive';
 import Tts from 'react-native-tts';
 import Geolocation from '@react-native-community/geolocation';
 import OfflineSyncService from '../utils/OfflineSyncService';
-import { ScrollView } from 'react-native';
+import {ScrollView} from 'react-native';
 
 const ActivityScreen = () => {
   const [currentLocation, setCurrentLocation] = useState<{
@@ -147,7 +147,7 @@ const ActivityScreen = () => {
           // Add to sync queue instead of direct API call
           await OfflineSyncService.addToSyncQueue(
             'activity_create',
-            'https://astro-api-okfis.ondigitalocean.app/api/activity/create',
+            'https://ecf63b299473.ngrok-free.app/api/activity/create',
             activityData,
             {
               'Content-Type': 'application/json',
@@ -810,15 +810,21 @@ const ActivityScreen = () => {
                 showsVerticalScrollIndicator={true}
                 contentContainerStyle={styles.eventListContent}>
                 {/* Sample events - in a real app, these would come from your data source */}
-                {[1, 2, 3, 4, 5].map((item) => (
+                {[1, 2, 3, 4, 5].map(item => (
                   <View key={item} style={styles.eventItem}>
                     <View style={styles.eventItemLeft}>
                       <Text style={styles.eventItemTitle}>Activity {item}</Text>
-                      <Text style={styles.eventItemDate}>{new Date().toLocaleDateString()}</Text>
+                      <Text style={styles.eventItemDate}>
+                        {new Date().toLocaleDateString()}
+                      </Text>
                     </View>
                     <View style={styles.eventItemRight}>
-                      <Text style={styles.eventItemDistance}>{(distance / item).toFixed(2)} km</Text>
-                      <Text style={styles.eventItemDuration}>{formatTime(Math.floor(duration / item))}</Text>
+                      <Text style={styles.eventItemDistance}>
+                        {(distance / item).toFixed(2)} km
+                      </Text>
+                      <Text style={styles.eventItemDuration}>
+                        {formatTime(Math.floor(duration / item))}
+                      </Text>
                     </View>
                   </View>
                 ))}

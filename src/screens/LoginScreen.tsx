@@ -8,7 +8,6 @@ import {
   ImageBackground,
   TouchableOpacity,
   Image,
-  TextInput,
   KeyboardAvoidingView,
   Platform,
 } from 'react-native';
@@ -16,8 +15,11 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../../App';
 import axios from 'axios';
 import UserContext from '../context/userContext';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import messaging from '@react-native-firebase/messaging';
+import auth from '@react-native-firebase/auth';
+import {GoogleSignin} from '@react-native-google-signin/google-signin';
 import NotificationService from '../components/NotificationService';
 import SessionManager from '../utils/SessionManager';
 
@@ -25,104 +27,156 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Login'>;
 
 const LoginScreen: React.FC<Props> = ({navigation}) => {
   const userContext = useContext(UserContext);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [isFormFilled, setIsFormFilled] = useState(false);
-  const [isPasswordVisible, setIsPasswordVisible] = useState(false);
+  const [authMethod, setAuthMethod] = useState<'google' | 'phone'>('google');
 
-  const handleEmailChange = (value: string) => {
-    setEmail(value);
-    setIsFormFilled(value.trim() !== '' && password.trim() !== '');
-  };
+  const handleSuccessfulLogin = async (response: any) => {
+    console.log('🔐 GOOGLE LOGIN - MOBILE-FIRST CHECK:', {
+      userId: response.data.userId,
+      email: response.data.email,
+      phoneNumber: response.data.phoneNumber,
+      hasProfile: !!response.data.profile,
+      requiresProfile: response.data.requiresProfile,
+      token: response.data.token ? 'Present' : 'Missing',
+      loginMethod: 'Google',
+      detectionMethod: response.data.profile ? 'Existing Profile' : 'New User',
+    });
 
-  const handlePasswordChange = (value: string) => {
-    setPassword(value);
-    setIsFormFilled(email.trim() !== '' && value.trim() !== '');
-  };
+    userContext?.setLoggedIn(true);
+    userContext?.setUserId(response.data.userId || '');
+    userContext?.setEmail(response.data.email || '');
+    userContext?.setAccessToken(response.data.token);
 
-  const handleLogin = async () => {
-    try {
-      const response = await axios.post(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/auth/signin',
-        {
-          email: email,
-          password: password,
-        },
-      );
-      // console.log('after login', response.data);
+    // Save session using SessionManager
+    const sessionManager = SessionManager.getInstance();
+    await sessionManager.saveLoginSession(
+      response.data.userId || '',
+      response.data.token,
+      response.data.email || '',
+    );
+    console.log('Login success response:', response.data);
+    // Store flag for new users who need profile creation
+    if (response.data.requiresProfile) {
+      await AsyncStorage.setItem('requiresProfile', 'true');
+    }
 
-      if (response.data.commonpassword === 'yes') {
-        userContext?.setDefaultPassword(true);
-      } else {
-        userContext?.setDefaultPassword(false);
+    // Initialize notifications
+    const initializeNotifications = async () => {
+      try {
+        const token = await NotificationService.initialize();
+        console.log('FCM Token initialized:', token);
+
+        // Foreground message handler
+        const unsubscribe = messaging().onMessage(
+          async (remoteMessage: any) => {
+            console.log('Foreground message:', remoteMessage);
+          },
+        );
+
+        // Background/Quit state handler
+        messaging().setBackgroundMessageHandler(async (remoteMessage: any) => {
+          console.log('Background message:', remoteMessage);
+        });
+
+        // App opened from background state
+        messaging().onNotificationOpenedApp((remoteMessage: any) => {
+          console.log('App opened from background:', remoteMessage);
+        });
+
+        // App opened from quit state
+        const initialNotification = await messaging().getInitialNotification();
+        if (initialNotification) {
+          console.log('App opened from quit state:', initialNotification);
+        }
+
+        return unsubscribe;
+      } catch (error) {
+        console.log('Notification initialization error:', error);
       }
-      userContext?.setLoggedIn(true);
-      userContext?.setUserId(response.data.userId || '');
-      userContext?.setEmail(response.data.email || '');
-      userContext?.setAccessToken(response.data.token);
+    };
 
-      // Save session using SessionManager (handles both AsyncStorage and native Android)
-      const sessionManager = SessionManager.getInstance();
-      await sessionManager.saveLoginSession(
-        response.data.userId || '',
-        response.data.token,
-        response.data.email || ''
+    initializeNotifications();
+    navigation.navigate('BottomTabs', {
+      screen: 'Home',
+    });
+  };
+
+  const handleFirebaseAuth = async (firebaseToken: string) => {
+    try {
+      const SERVER_URL = 'https://ecf63b299473.ngrok-free.app';
+      const response = await axios.post(
+        `${SERVER_URL}/api/user/auth/verify-firebase`,
+        {firebaseToken},
       );
-      // const storedUserId = await AsyncStorage.getItem('userId');
-      // console.log('User ID from AsyncStorage after stored:', storedUserId);
-      // console.log('User logged in:', response.data);
-      const initializeNotifications = async () => {
-        try {
-          const token = await NotificationService.initialize();
-          console.log('FCM Token initialized:', token);
 
-          // Foreground message handler
-          const unsubscribe = messaging().onMessage(
-            async (remoteMessage: any) => {
-              console.log('Foreground message:', remoteMessage);
-              // Add your notification display logic here
-            },
-          );
-
-          // Background/Quit state handler
-          messaging().setBackgroundMessageHandler(
-            async (remoteMessage: any) => {
-              console.log('Background message:', remoteMessage);
-            },
-          );
-
-          // App opened from background state
-          messaging().onNotificationOpenedApp((remoteMessage: any) => {
-            console.log('App opened from background:', remoteMessage);
-            // Add navigation logic here
+      if (response.data.success) {
+        // Handle different response actions
+        if (response.data.action === 'COLLECT_MISSING_CONTACT') {
+          // Need to collect missing contact info (phone for Google)
+          console.log('📝 COLLECT MISSING CONTACT - NEED PHONE:', {
+            email: response.data.availableContacts?.email,
+            availableContacts: response.data.availableContacts,
+            willAskForPhone: true,
           });
 
-          // App opened from quit state
-          const initialNotification =
-            await messaging().getInitialNotification();
-          if (initialNotification) {
-            console.log('App opened from quit state:', initialNotification);
-            // Add navigation logic here
+          // For Google login, we need to collect phone number
+          // For now, create user without phone - they can add it later in profile
+          const createResponse = await axios.post(
+            'https://ecf63b299473.ngrok-free.app/api/user/auth/create-user-with-contacts',
+            {
+              firebaseUid: response.data.firebaseUid,
+              email: response.data.availableContacts?.email,
+              phoneNumber: null, // Google login doesn't have phone initially
+            },
+          );
+
+          if (createResponse.data.success) {
+            console.log('📧 GOOGLE USER CREATED WITHOUT PHONE:', {
+              email: response.data.availableContacts?.email,
+              userId: createResponse.data.userId,
+              action: 'User created, can add phone later',
+            });
+            await handleSuccessfulLogin(createResponse);
+          } else {
+            await handleSuccessfulLogin(response);
           }
-
-          return unsubscribe;
-        } catch (error) {
-          console.log('Notification initialization error:', error);
+        } else {
+          // User authenticated successfully (existing or new)
+          await handleSuccessfulLogin(response);
         }
-      };
-
-      initializeNotifications();
-      navigation.navigate('BottomTabs', {
-        screen: 'Home',
-      });
+      }
     } catch (error: any) {
-      console.error('Login Error:', error);
+      console.error('Firebase Auth Error:', error);
       Alert.alert(
-        'Login failed',
+        'Authentication failed',
         error.response?.data?.message ||
-          'An error occurred during login. Please try again.',
+          'An error occurred during authentication.',
       );
     }
+  };
+
+  const handleGoogleLogin = async () => {
+    try {
+      await GoogleSignin.hasPlayServices();
+      const userInfo = await GoogleSignin.signIn();
+      const idToken = userInfo.data?.idToken;
+      if (!idToken) {
+        throw new Error('No ID token found');
+      }
+      const googleCredential = auth.GoogleAuthProvider.credential(idToken);
+      await auth().signInWithCredential(googleCredential);
+
+      const firebaseToken = await auth().currentUser?.getIdToken();
+      if (firebaseToken) {
+        await handleFirebaseAuth(firebaseToken);
+      }
+    } catch (error: any) {
+      console.error('Google Login Error:', error);
+      Alert.alert('Google Login Failed', error.message);
+    }
+  };
+
+  const handlePhoneLogin = () => {
+    navigation.navigate('OTPLogin');
   };
 
   return (
@@ -134,64 +188,64 @@ const LoginScreen: React.FC<Props> = ({navigation}) => {
         style={styles.background}>
         <View style={styles.overlay}>
           <View style={styles.container}>
-          <Image
-            source={require('../assets/novoRUN_circular.png')}
-            style={styles.logoImage}
-          />
-          <Text style={styles.title}>GET STARTED</Text>
-          <Text style={styles.subtitle}>Register to save your run.</Text>
-
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholderTextColor="grey"
-              placeholder="Email"
-              value={email}
-              onChangeText={handleEmailChange}
-              keyboardType="email-address"
-              autoCapitalize="none"
+            <Image
+              source={require('../assets/novoRUN_circular.png')}
+              style={styles.logoImage}
             />
-          </View>
+            <Text style={styles.title}>GET STARTED</Text>
+            <Text style={styles.subtitle}>Choose your sign-in method</Text>
 
-          <View style={styles.inputContainer}>
-            <TextInput
-              style={styles.input}
-              placeholderTextColor="grey"
-              placeholder="Password"
-              value={password}
-              onChangeText={handlePasswordChange}
-              secureTextEntry={!isPasswordVisible}
-            />
-            <TouchableOpacity
-              onPress={() => setIsPasswordVisible(!isPasswordVisible)}
-              style={styles.eyeIcon}>
-              <Image
-                source={
-                  isPasswordVisible
-                    ? require('../assets/eye.png')
-                    : require('../assets/blind.png')
-                }
-                style={styles.eyeImage}
-              />
-            </TouchableOpacity>
-          </View>
-          <TouchableOpacity
-            onPress={() => navigation.navigate('ForgotPasswordScreen')}>
-            <Text style={styles.forgotPasswordText}>Forgot password?</Text>
-          </TouchableOpacity>
+            {/* Authentication Method Selection */}
+            <View style={styles.methodContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.methodButton,
+                  authMethod === 'google' && styles.selectedMethod,
+                ]}
+                onPress={() => setAuthMethod('google')}>
+                <Text
+                  style={[
+                    styles.methodText,
+                    authMethod === 'google' && styles.selectedMethodText,
+                  ]}>
+                  Google
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.methodButton,
+                  authMethod === 'phone' && styles.selectedMethod,
+                ]}
+                onPress={() => setAuthMethod('phone')}>
+                <Text
+                  style={[
+                    styles.methodText,
+                    authMethod === 'phone' && styles.selectedMethodText,
+                  ]}>
+                  Phone
+                </Text>
+              </TouchableOpacity>
+            </View>
 
-          <TouchableOpacity
-            style={[
-              styles.button,
-              {backgroundColor: isFormFilled ? '#00296B' : '#808080'},
-            ]}
-            onPress={handleLogin}
-            disabled={!isFormFilled}>
-            <Text style={styles.buttonText}>Continue</Text>
-          </TouchableOpacity>
+            {/* Authentication Buttons */}
+            {authMethod === 'google' && (
+              <TouchableOpacity
+                style={styles.authButton}
+                onPress={handleGoogleLogin}>
+                <Text style={styles.authButtonText}>Continue with Google</Text>
+              </TouchableOpacity>
+            )}
+
+            {authMethod === 'phone' && (
+              <TouchableOpacity
+                style={styles.authButton}
+                onPress={handlePhoneLogin}>
+                <Text style={styles.authButtonText}>Continue with Phone</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
-      </View>
-    </ImageBackground>
+      </ImageBackground>
     </KeyboardAvoidingView>
   );
 };
@@ -230,8 +284,47 @@ const styles = StyleSheet.create({
   subtitle: {
     fontSize: 18,
     color: '#00296B',
-    marginBottom: 20,
+    marginBottom: 30,
   },
+  methodContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    marginBottom: 30,
+  },
+  methodButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 30,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: '#00296B',
+    backgroundColor: 'transparent',
+  },
+  selectedMethod: {
+    backgroundColor: '#00296B',
+  },
+  selectedMethodText: {
+    color: 'white',
+  },
+  methodText: {
+    color: '#00296B',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  authButton: {
+    backgroundColor: '#00296B',
+    borderRadius: 25,
+    paddingVertical: 15,
+    paddingHorizontal: 20,
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  authButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  // Legacy styles (keeping for backward compatibility)
   inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',

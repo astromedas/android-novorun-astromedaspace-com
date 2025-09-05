@@ -86,7 +86,7 @@ function YourPostScreen() {
   const [commentsModalVisible, setCommentsModalVisible] = useState(false);
   const [updating, setUpdating] = useState(false);
   // API base URL - replace with your actual API endpoint
-  const API_BASE_URL = 'https://astro-api-okfis.ondigitalocean.app/api';
+  const API_BASE_URL = 'https://ecf63b299473.ngrok-free.app/api';
 
   useEffect(() => {
     fetchUserPosts();

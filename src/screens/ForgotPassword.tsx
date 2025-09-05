@@ -45,7 +45,7 @@ const ForgotPasswordScreen = () => {
         : `${phoneNumber}`;
       // Validate email and phone with server
       const response = await axios.post(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/auth/pm',
+        'https://ecf63b299473.ngrok-free.app/api/user/auth/pm',
         {
           email,
           phoneNumber: formattedPhone,
@@ -74,7 +74,7 @@ const ForgotPasswordScreen = () => {
     setIsLoading(true);
     try {
       const response = await axios.put(
-        'https://astro-api-okfis.ondigitalocean.app/api/user/auth/updatemail',
+        'https://ecf63b299473.ngrok-free.app/api/user/auth/updatemail',
         {
           email,
           newPassword,
