@@ -13,7 +13,36 @@
           "package_name": "com.novorun.app"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "989682514176-3vpr93gde9rfe5mlr1kdjenuv0sp66cl.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novorun.app",
+            "certificate_hash": "4bb2ecbeef0688cf21f1ef666d38f619e16ada7b"
+          }
+        },
+        {
+          "client_id": "989682514176-59veoqb98dfaearngvq391snu057hio3.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novorun.app",
+            "certificate_hash": "5b1dcb0d2ac07f3f4e7e55b6262f1f586fc7693d"
+          }
+        },
+        {
+          "client_id": "989682514176-ar6tcpu92v8dnv8og2tsoa5s8nlvv4fa.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.novorun.app",
+            "certificate_hash": "5e8f16062ea3cd2c4a0d547876baa6f38cabf625"
+          }
+        },
+        {
+          "client_id": "989682514176-4k30iajpe0s6e6oh52tbu1na7ml00k2v.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyC2TIv5LGFQSp75KX0jDERemuZyM4IrUdo"
@@ -21,7 +50,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "989682514176-4k30iajpe0s6e6oh52tbu1na7ml00k2v.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "989682514176-12ca0vs13glm4ck306v2cmj29c9a8t8v.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.novo.appnovo"
+              }
+            }
+          ]
         }
       }
     }

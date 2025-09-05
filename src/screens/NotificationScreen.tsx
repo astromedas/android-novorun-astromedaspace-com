@@ -35,7 +35,7 @@ const NotificationScreen: React.FC = () => {
     const fetchNotifications = async () => {
       try {
         const response = await axios.get(
-          'https://astro-api-okfis.ondigitalocean.app/api/user/notification/check',
+          'https://ecf63b299473.ngrok-free.app/api/user/notification/check',
           {
             headers: {
               Authorization: `Bearer ${user?.accessToken}`,

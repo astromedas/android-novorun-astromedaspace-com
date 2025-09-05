@@ -20,7 +20,7 @@ import {
   heightPercentageToDP as hp,
 } from 'react-native-responsive-screen';
 import LinearGradient from 'react-native-linear-gradient';
-import { formatDurationDisplay } from '../utils/timeFormatter';
+import {formatDurationDisplay} from '../utils/timeFormatter';
 
 interface Event {
   eventId: string;
@@ -72,7 +72,7 @@ const LeaderBoard = () => {
     const fetchEvents = async () => {
       try {
         const response = await axios.get(
-          `https://astro-api-okfis.ondigitalocean.app/api/user/event/participated/list?userId=${userid}`,
+          `https://ecf63b299473.ngrok-free.app/api/user/event/participated/list?userId=${userid}`,
           {
             headers: {
               Authorization: `Bearer ${user?.accessToken}`,
@@ -112,7 +112,7 @@ const LeaderBoard = () => {
   const fetchRankings = async (eventId: string, routeType: string) => {
     try {
       const response = await axios.get(
-        `https://astro-api-okfis.ondigitalocean.app/api/user/event/rankings?userId=${userid}&eventId=${eventId}&gender=${gender}&routeType=${routeType}`,
+        `https://ecf63b299473.ngrok-free.app/api/user/event/rankings?userId=${userid}&eventId=${eventId}&gender=${gender}&routeType=${routeType}`,
         {
           headers: {
             Authorization: `Bearer ${user?.accessToken}`,
@@ -253,7 +253,9 @@ const LeaderBoard = () => {
                   style={styles.medalImage}
                 />
                 <Text style={styles.name}>{item.userName}</Text>
-                <Text style={styles.time}>{formatDurationDisplay(item.duration)}</Text>
+                <Text style={styles.time}>
+                  {formatDurationDisplay(item.duration)}
+                </Text>
               </View>
             </View>
           )}

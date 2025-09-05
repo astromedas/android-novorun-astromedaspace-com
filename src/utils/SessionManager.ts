@@ -29,7 +29,7 @@ class SessionManager {
 
   private async handleSessionExpired() {
     console.log('Session expired event received from native Android');
-    
+
     // Clear AsyncStorage to match native storage clearing
     try {
       await AsyncStorage.multiRemove(['userId', 'userToken', 'email']);
@@ -66,7 +66,7 @@ class SessionManager {
       if (Platform.OS === 'android' && SessionModule) {
         return await SessionModule.isSessionValid();
       }
-      
+
       // Fallback for iOS or if native module not available
       const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('userToken');
@@ -99,19 +99,19 @@ class SessionManager {
       if (Platform.OS === 'android' && SessionModule) {
         return await SessionModule.getSessionInfo();
       }
-      
+
       // Fallback for iOS
       const userId = await AsyncStorage.getItem('userId');
       const token = await AsyncStorage.getItem('userToken');
       const email = await AsyncStorage.getItem('email');
-      
+
       return {
         isLoggedIn: !!(userId && token),
         isValid: !!(userId && token),
         userId,
         token,
         email,
-        sessionAgeInDays: 0 // Can't calculate without login timestamp on iOS
+        sessionAgeInDays: 0, // Can't calculate without login timestamp on iOS
       };
     } catch (error) {
       console.error('Error getting session info:', error);

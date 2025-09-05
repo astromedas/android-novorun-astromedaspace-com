@@ -74,7 +74,7 @@ const CommunityScreen: React.FC = () => {
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const requestInProgressRef = useRef(false);
   const [receivedPostIds, setReceivedPostIds] = useState<string[]>([]);
-  const API_BASE_URL = 'https://astro-api-okfis.ondigitalocean.app/api';
+  const API_BASE_URL = 'https://ecf63b299473.ngrok-free.app/api';
 
   const mapApiPostToComponentPost = (apiPost: any): Post => {
     let imageUrl = apiPost.mediaUrl;

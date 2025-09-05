@@ -86,7 +86,7 @@ const StepsAndMap: React.FC = () => {
           stepCount?: number;
           targetSteps?: number;
         }> = await axios.get(
-          `https://astro-api-okfis.ondigitalocean.app/api/goal/view?userId=${user.userId}&date=${date}`,
+          `https://ecf63b299473.ngrok-free.app/api/goal/view?userId=${user.userId}&date=${date}`,
           {
             headers: {
               Authorization: `Bearer ${user.accessToken}`,
